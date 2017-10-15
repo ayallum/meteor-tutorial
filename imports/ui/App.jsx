@@ -5,8 +5,10 @@ import { Meteor } from 'meteor/meteor';
 import { createContainer } from 'meteor/react-meteor-data';
 
 import { Tasks } from '../api/tasks.js';
+import { Chats } from '../api/chats.js';
  
 import Task from './Task.jsx';
+import Chat from './Chat.jsx';
 import AccountsUIWrapper from './AccountsUIWrapper.jsx';
  
 // App component - represents the whole app
@@ -18,6 +20,18 @@ class App extends Component {
 			hideCompleted: false,
 		};
 	}
+	
+	handleChat(event) {
+		event.preventDefault();
+ 
+    // Find the text field via the React ref
+    const text = ReactDOM.findDOMNode(this.refs.textInput2).value.trim();
+		Meteor.call('chats.insert', text);
+ 
+    // Clear form
+    ReactDOM.findDOMNode(this.refs.textInput2).value = '';
+  }
+	
   handleSubmit(event) {
 	  event.preventDefault();
 		
@@ -51,6 +65,13 @@ class App extends Component {
 			);
 		});   
   }
+	
+	renderChats() {
+		return this.props.chats.map((chat) => (
+		<Chat key={chat._id} chat={chat} />
+	));
+	}
+	
 
   render() {
     return (
@@ -79,27 +100,48 @@ class App extends Component {
               />
             </form> : ''
           }
+				
         </header>
  
         <ul>
           {this.renderTasks()}
         </ul>
+				
+				 <header>
+					<h1>Chat</h1>
+					{ this.props.currentUser ?
+						<form className="new-chat" onSubmit={this.handleChat.bind(this)} >
+							<input
+								type="text"
+								ref="textInput2"
+								placeholder="Type to chat"
+							/>
+						</form> : ''
+					}
+				</header> 
+				<ul>
+					{this.renderChats()}
+				</ul>
       </div>
+			
     );
   }
 }
 
 App.propTypes = {
 	tasks: PropTypes.array.isRequired,
+	chats: PropTypes.array.isRequired,
 	incompleteCount: PropTypes.number.isRequired,
 	currentUser: PropTypes.object,
 };
 
 export default createContainer(() => {
 	Meteor.subscribe('tasks');
+	Meteor.subscribe('chats');
 	
 	return {
 		tasks: Tasks.find({}, { sort: { createdAt: -1 } }).fetch(),
+		chats: Chats.find({}, { sort: { createdAt: -1 } }).fetch(),
 		incompleteCount: Tasks.find({ checked: { $ne: true } }).count(),
 		currentUser: Meteor.user(),
 	};
